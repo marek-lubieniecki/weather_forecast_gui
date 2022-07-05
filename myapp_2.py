@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QCalendarWidget, QVBoxLay
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("My app")
+        self.setWindowTitle("GFS Weather Forecast GUI")
         self.UiComponents()
 
     def UiComponents(self):
