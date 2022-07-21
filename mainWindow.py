@@ -5,6 +5,10 @@ from mapWindow import *
 
 from widgetConfig import *
 from utility import *
+import geopandas as gpd
+import matplotlib.pyplot as plt
+
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -47,12 +51,13 @@ class MainWindow(QMainWindow):
 
         self.longitude_line.textChanged.connect(self.update_coordinates_label)
         self.latitude_line.textChanged.connect(self.update_coordinates_label)
-
+        self.west_checkbox.toggled.connect(self.update_coordinates_label)
+        self.south_checkbox.toggled.connect(self.update_coordinates_label)
 
         self.coordinates_rounded_label = QLabel()
-        show_map_button = QPushButton("Show location on map")
-        show_map_button.setCheckable(True)
-        show_map_button.clicked.connect(self.showMap)
+        self.show_map_button = QPushButton("Show location on map")
+        self.show_map_button.setCheckable(True)
+        self.show_map_button.clicked.connect(self.show_map)
 
         self.download_forecast_button = QPushButton("Download")
         self.show_forecast_button = QPushButton("Show")
@@ -66,7 +71,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("Longitude:"))
         layout.addLayout(self.longitude_layout)
         layout.addWidget(self.coordinates_rounded_label)
-        layout.addWidget(show_map_button)
+        layout.addWidget(self.show_map_button)
         layout.addWidget(forecast_date_picker)
         layout.addLayout(self.button_layout)
         central_widget.setLayout(layout)
@@ -77,18 +82,35 @@ class MainWindow(QMainWindow):
         self.latitude_round = 0
         self.longitude_round = 0
 
-    def showMap(self):
-        pass
+    def show_map(self):
+        # From GeoPandas, our world map data
+        worldmap = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
+        # Creating axes and plotting world map
+        fig, ax = plt.subplots(figsize=(12, 6))
+        worldmap.plot(color="lightgrey", ax=ax)
+        plt.scatter(self.longitude, self.latitude)
+        plt.scatter(self.longitude_round, self.latitude_round)
+        plt.show()
 
     def update_coordinates_label(self):
         self.latitude = self.latitude_line.text()
         self.longitude = self.longitude_line.text()
+        self.latitude = float(self.latitude)
+        self.longitude = float(self.longitude)
 
         try:
             self.latitude_round = round_coordinates(float(self.latitude))
             self.longitude_round = round_coordinates(float(self.longitude))
         except Exception:
             QMessageBox.about(self, 'Error', 'Input a number')
+
+        if self.south_checkbox.isChecked():
+            self.latitude_round = -self.latitude_round
+            self.latitude = - self.latitude
+        if self.west_checkbox.isChecked():
+            self.longitude_round = -self.longitude_round
+            self.longitude = - self.longitude
+
         self.coordinates_rounded_label.setText('Current coordinates: ' + str(self.latitude_round) + ' ' + str(self.longitude_round))
 
 
