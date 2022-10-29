@@ -1,14 +1,13 @@
 import sys
 
-from PyQt5.QtWidgets import QApplication, QMainWindow, QCalendarWidget, QVBoxLayout, QHBoxLayout, QGridLayout,QButtonGroup, QLineEdit, QLabel, QWidget, QPushButton, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QDateTimeEdit, QVBoxLayout, QHBoxLayout, QGridLayout,QButtonGroup, QLineEdit, QLabel, QWidget, QPushButton, QMessageBox
 
 
 from widgetConfig import *
 from utility import *
 import geopandas as gpd
 import matplotlib.pyplot as plt
-
-
+from datetime import datetime
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -20,7 +19,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         coordinate_layout = QHBoxLayout()
         central_widget = QWidget()
-        forecast_date_picker = QCalendarWidget()
+        forecast_date_picker = QDateTimeEdit(datetime.today())
 
         self.latitude_button_group = QButtonGroup()
         self.latitude_layout = QHBoxLayout(self)
@@ -102,10 +101,8 @@ class MainWindow(QMainWindow):
             self.latitude_round = round_coordinates(self.latitude)
             self.longitude_round = round_coordinates(self.longitude)
 
-
-        except Exception:
+        except ValueError:
             QMessageBox.about(self, 'Error', 'Input a number')
-
 
         if self.south_checkbox.isChecked():
             self.latitude_round = -self.latitude_round
