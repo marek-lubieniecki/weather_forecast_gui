@@ -95,14 +95,17 @@ class MainWindow(QMainWindow):
     def update_coordinates_label(self):
         self.latitude = self.latitude_line.text()
         self.longitude = self.longitude_line.text()
-        self.latitude = float(self.latitude)
-        self.longitude = float(self.longitude)
 
         try:
-            self.latitude_round = round_coordinates(float(self.latitude))
-            self.longitude_round = round_coordinates(float(self.longitude))
+            self.latitude = float(self.latitude)
+            self.longitude = float(self.longitude)
+            self.latitude_round = round_coordinates(self.latitude)
+            self.longitude_round = round_coordinates(self.longitude)
+
+
         except Exception:
             QMessageBox.about(self, 'Error', 'Input a number')
+
 
         if self.south_checkbox.isChecked():
             self.latitude_round = -self.latitude_round
