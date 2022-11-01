@@ -1,6 +1,7 @@
 import sys
 
-from PyQt5.QtWidgets import QApplication, QMainWindow, QDateTimeEdit, QVBoxLayout, QHBoxLayout, QGridLayout,QButtonGroup, QLineEdit, QLabel, QWidget, QPushButton, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QDateEdit, QVBoxLayout, QHBoxLayout, QGridLayout,QButtonGroup, \
+    QLineEdit, QLabel, QWidget, QPushButton, QMessageBox, QComboBox
 
 
 from widgetConfig import *
@@ -8,18 +9,29 @@ from utility import *
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from datetime import datetime
+from rocketpy import Environment
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("GFS Weather Forecast GUI")
+        self.setWindowTitle("GFS GUI")
+
+        self.latitude = 0
+        self.longitude = 0
+        self.latitude_round = 0
+        self.longitude_round = 0
+        self.date = None
+        self.hour = None
+        self.hours = list(range(24))
+        self.environment = None
+
         self.UiComponents()
+
 
     def UiComponents(self):
         layout = QVBoxLayout()
         coordinate_layout = QHBoxLayout()
         central_widget = QWidget()
-        forecast_date_picker = QDateTimeEdit(datetime.today())
 
         self.latitude_button_group = QButtonGroup()
         self.latitude_layout = QHBoxLayout(self)
@@ -58,12 +70,23 @@ class MainWindow(QMainWindow):
         self.show_map_button.setCheckable(True)
         self.show_map_button.clicked.connect(self.show_map)
 
-        self.download_forecast_button = QPushButton("Download")
+        self.forecast_date = QDateEdit(datetime.today())
+        self.forecast_hour = QComboBox()
+        for hour in self.hours: self.forecast_hour.addItem(str(hour))
+        self.forecast_hour.setCurrentText("12")
+
         self.show_forecast_button = QPushButton("Show")
+        self.download_forecast_button = QPushButton("Save")
         self.button_layout = QHBoxLayout(self)
 
+        self.show_forecast_button.clicked.connect(self.show_forecast)
+
+        self.button_layout.addWidget(self.show_forecast_button)
         self.button_layout.addWidget(self.download_forecast_button)
-        self.button_layout.addWidget(self.show_forecast_button )
+
+        self.datetime_layout = QHBoxLayout(self)
+        self.datetime_layout.addWidget(self.forecast_date)
+        self.datetime_layout.addWidget(self.forecast_hour)
 
         layout.addWidget(QLabel("Latitude:"))
         layout.addLayout(self.latitude_layout)
@@ -71,15 +94,12 @@ class MainWindow(QMainWindow):
         layout.addLayout(self.longitude_layout)
         layout.addWidget(self.coordinates_rounded_label)
         layout.addWidget(self.show_map_button)
-        layout.addWidget(forecast_date_picker)
+        layout.addLayout(self.datetime_layout)
         layout.addLayout(self.button_layout)
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
-        self.latitude = 0
-        self.longitude = 0
-        self.latitude_round = 0
-        self.longitude_round = 0
+
 
     def show_map(self):
         # From GeoPandas, our world map data
@@ -113,4 +133,22 @@ class MainWindow(QMainWindow):
 
         self.coordinates_rounded_label.setText('Current coordinates: ' + str(self.latitude_round) + ' ' + str(self.longitude_round))
 
+    def show_forecast(self):
 
+        date = self.forecast_date.date()
+        year = date.year()
+        month = date.month()
+        day = date.day()
+        hour = int(self.forecast_hour.currentText())
+
+        self.environment = Environment(railLength=0,
+                                       latitude=self.latitude_round,
+                                       longitude=self.longitude_round,
+                                       elevation=0,
+                                       date=(year, month, day, hour))
+
+        self.environment.setAtmosphericModel(type='Forecast', file='GFS')
+        self.environment.allInfo()
+
+    def save_forecast(self):
+        pass
