@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):
         self.download_forecast_button = QPushButton("Save")
         self.button_layout = QHBoxLayout(self)
 
-        self.show_forecast_button.clicked.connect(self.show_forecast)
+        self.show_forecast_button.clicked.connect(self.set_forecast)
 
         self.button_layout.addWidget(self.show_forecast_button)
         self.button_layout.addWidget(self.download_forecast_button)
@@ -133,14 +133,14 @@ class MainWindow(QMainWindow):
 
         self.coordinates_rounded_label.setText('Current coordinates: ' + str(self.latitude_round) + ' ' + str(self.longitude_round))
 
-    def show_forecast(self):
+    def set_forecast(self):
 
         date = self.forecast_date.date()
         year = date.year()
         month = date.month()
         day = date.day()
         hour = int(self.forecast_hour.currentText())
-
+        print(year, month, day, hour)
         self.environment = Environment(railLength=0,
                                        latitude=self.latitude_round,
                                        longitude=self.longitude_round,
