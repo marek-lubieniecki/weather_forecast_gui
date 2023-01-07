@@ -1,17 +1,51 @@
 import netCDF4
-from datetime import datetime, date
+from datetime import datetime, timezone, timedelta
+
 
 class GfsForecast:
-    def __init__(self, latitude, longitude, datetime, forecast_interval):
+    def __init__(self, latitude, longitude, forecast_datetime, forecast_interval):
         self.latitude = latitude
         self.longitude = longitude
-        self.datetime = datetime
+        self.forecast_datetime = forecast_datetime
         self.forecast_interval = forecast_interval
         self.date_today = datetime.today()
-        self.gfs_url = ''
 
-    def generate_gfs_url(self):
-        pass
+        self.gfs_url = ''
+        self.forecast_update_times = [0, 6, 12, 18]
+        self.gfs_dataset = None
+        self.forecast_file_date = None
+
+    def download_latest_forecast(self):
+        success = False
+        self.forecast_file_date = datetime.now(timezone.utc)
+
+        attempt_count = 0
+
+        while not success and attempt_count < 10:
+            attempt_count += 1
+            self.forecast_file_date -= timedelta(hours=6 * attempt_count)
+            hour_round = 6 * (self.forecast_file_date.hour // 6)
+            self.forecast_file_date = self.forecast_file_date.replace(hour=hour_round, minute=0, second=0,
+                                                                      microsecond=0)
+
+            self.gfs_url = "https://nomads.ncep.noaa.gov/dods/gfs_0p25/gfs{:04d}{:02d}{:02d}/gfs_0p25_{:02d}z".format(
+                self.forecast_file_date.year,
+                self.forecast_file_date.month,
+                self.forecast_file_date.day,
+                self.forecast_file_date.hour)
+
+            try:
+                print("Retrieving file: ", str(self.forecast_file_date))
+                print("GFS Url: ", self.gfs_url)
+                self.gfs_dataset = netCDF4.Dataset(self.gfs_url)
+            except OSError:
+                print("Dataset ", self.gfs_url, "not found!")
+
+            else:
+                print("Dataset found!")
+                success = True
+
+    def post_p
 
     def download_gfs_forecast(self):
         dataset = netCDF4.Dataset(self.gfs_url)
@@ -65,6 +99,6 @@ class GfsForecast:
         #
         #     def downloadForecastfile(self):
 
-
-
-
+# find latest forecast file
+# open forecast file
+#
