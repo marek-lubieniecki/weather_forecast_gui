@@ -1,8 +1,8 @@
 import sys
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDateEdit, QVBoxLayout, QHBoxLayout, QGridLayout,QButtonGroup, \
-    QLineEdit, QLabel, QWidget, QPushButton, QMessageBox, QComboBox
-
+    QLineEdit, QLabel, QWidget, QPushButton, QMessageBox, QComboBox, QSpinBox
+from PyQt5.QtCore import Qt
 
 from widgetConfig import *
 from utility import *
@@ -10,6 +10,11 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 from datetime import datetime
 from rocketpy import Environment
+
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
+
+from GfsForecast import *
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -24,6 +29,7 @@ class MainWindow(QMainWindow):
         self.hour = None
         self.hours = list(range(24))
         self.environment = None
+        self.forecast = GfsForecast(latitude=0, longitude=0, forecast_datetime=None, forecast_interval=None)
 
         self.UiComponents()
 
@@ -70,6 +76,8 @@ class MainWindow(QMainWindow):
         self.show_map_button.setCheckable(True)
         self.show_map_button.clicked.connect(self.show_map)
 
+
+        self.forecast_number = QSpinBox()
         self.forecast_date = QDateEdit(datetime.today())
         self.forecast_hour = QComboBox()
         for hour in self.hours: self.forecast_hour.addItem(str(hour))
@@ -85,21 +93,35 @@ class MainWindow(QMainWindow):
         self.button_layout.addWidget(self.download_forecast_button)
 
         self.datetime_layout = QHBoxLayout(self)
+        self.datetime_layout.addWidget(self.forecast_number)
         self.datetime_layout.addWidget(self.forecast_date)
         self.datetime_layout.addWidget(self.forecast_hour)
 
-        layout.addWidget(QLabel("Latitude:"))
-        layout.addLayout(self.latitude_layout)
-        layout.addWidget(QLabel("Longitude:"))
-        layout.addLayout(self.longitude_layout)
-        layout.addWidget(self.coordinates_rounded_label)
-        layout.addWidget(self.show_map_button)
-        layout.addLayout(self.datetime_layout)
-        layout.addLayout(self.button_layout)
-        central_widget.setLayout(layout)
+        sc = MplCanvas(self, width=5, height=4, dpi=100)
+        sc.axes.plot([0, 1, 2, 3, 4], [10, 1, 20, 3, 40])
+
+        self.main_layout = QHBoxLayout(self)
+
+        self.main_left_layout = QVBoxLayout(self)
+        self.main_right_layout = QVBoxLayout(self)
+
+        self.main_left_layout.addWidget(QLabel("Latitude:"))
+        self.main_left_layout.addLayout(self.latitude_layout)
+        self.main_left_layout.addWidget(QLabel("Longitude:"))
+        self.main_left_layout.addLayout(self.longitude_layout)
+        self.main_left_layout.addWidget(self.coordinates_rounded_label)
+        self.main_left_layout.addWidget(self.show_map_button)
+        self.main_left_layout.addLayout(self.datetime_layout)
+        self.main_left_layout.addLayout(self.button_layout)
+        self.main_left_layout.addStretch()
+
+        self.main_right_layout.addWidget(sc)
+
+        self.main_layout.addLayout(self.main_left_layout)
+        self.main_layout.addLayout(self.main_right_layout)
+
+        central_widget.setLayout(self.main_layout)
         self.setCentralWidget(central_widget)
-
-
 
     def show_map(self):
         # From GeoPandas, our world map data
@@ -152,3 +174,11 @@ class MainWindow(QMainWindow):
 
     def save_forecast(self):
         pass
+
+
+class MplCanvas(FigureCanvasQTAgg):
+
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+        super(MplCanvas, self).__init__(fig)
