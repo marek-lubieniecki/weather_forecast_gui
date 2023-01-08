@@ -1,6 +1,7 @@
 import netCDF4
+from netCDF4 import date2index
 from datetime import datetime, timezone, timedelta
-
+from utility import *
 
 class GfsForecast:
     def __init__(self, latitude, longitude, forecast_datetime, forecast_interval):
@@ -11,9 +12,23 @@ class GfsForecast:
         self.date_today = datetime.today()
 
         self.gfs_url = ''
-        self.forecast_update_times = [0, 6, 12, 18]
         self.gfs_dataset = None
         self.forecast_file_date = None
+
+        self.latitude_index = 0
+        self.longitude_index = 0
+
+        self.times = None
+        self.lats = None
+        self.lons = None
+        self.vwinds = None
+        self.uwinds = None
+        self.pressures = None
+        self.temperatures = None
+
+        self.download_latest_forecast()
+        self.set_latitude(latitude)
+        self.set_longitude(longitude)
 
     def download_latest_forecast(self):
         success = False
@@ -45,60 +60,54 @@ class GfsForecast:
                 print("Dataset found!")
                 success = True
 
-    def post_p
+    def process_gfs_forecast(self):
+        time = self.gfs_dataset.variables["time"]
+        uwind = self.gfs_dataset.variables["ugrdprs"]
+        vwind = self.gfs_dataset.variables["vgrdprs"]
+        surface_geopotential_height = self.gfs_dataset.variables["hgtsfc"]
+        geopotential_heights = self.gfs_dataset.variables["hgtprs"]
+        temperatures = self.gfs_dataset.variables["hgtprs"]
+        pressures = self.gfs_dataset.variables["hgtprs"]
+        lats = self.gfs_dataset.variables["lat"][:].tolist()
+        lons = self.gfs_dataset.variables["lon"][:].tolist()
 
-    def download_gfs_forecast(self):
-        dataset = netCDF4.Dataset(self.gfs_url)
-        uwind = dataset.variables["ugrdprs"]
-        vwind = dataset.variables["vgrdprs"]
-        altitudes = dataset.variables["lev"]
-        lats = dataset.variables["lat"]
-        lons = dataset.variables["lon"]
-        time = dataset.variables["time"]
+        forecast_day_index = date2index(self.forecast_datetime, time, calendar="gregorian")
+        print("Time index: ", forecast_day_index)
+        print("Latitude index ", lats.index(50))
+        print(time[forecast_day_index])
+        print(time[forecast_day_index]-time[0])
+        print(time[1])
+        print(time[3])
+        print(uwind[0,0,0,0])
+        print(lats[0])
+        print('pause')
 
-        import sys
-        from datetime import date
+    def set_latitude(self, latitude):
+        self.latitude = latitude
+        self.latitude_index = se
 
-        # class GfsLocationTime:
-        #
-        #     def __init__(self):
-        #         self.latitude = 0
-        #         self.longitude = 0
-        #         self.forecastDateHour = datetime.today()
-        #         self.GfsString = ""
-        #
-        #     def generateGfsString(self):
-        #         # create string to aquire newest gfs forecast
-        #         if len(str(dateToday.day)) == 1:
-        #             dayString = "0" + str(dateToday.day)
-        #         else:
-        #             dayString = str(dateToday.day)
-        #
-        #         if len(str(dateToday.month)) == 1:
-        #             monthString = "0" + str(dateToday.month)
-        #         else:
-        #             monthString = str(dateToday.month)
-        #
-        #         if len(str(hour)) == 1:
-        #             hourString = "0" + str(hour)
-        #         else:
-        #             hourString = str(hour)
-        #
-        #         dateFile = datetime(dateToday.year, dateToday.month, dateToday.day, hour, 0, 0, 0)
-        #         numberHours = int((datetime.timestamp(dateForecast) - datetime.timestamp(dateFile)) / 3600)
-        #
-        #         yearString = str(dateToday.year)
-        #         dateString = yearString + monthString + dayString
-        #
-        #         if forecastInterval == 1:
-        #             url = 'http://nomads.ncep.noaa.gov:80/dods/gfs_0p25_1hr/gfs{}/gfs_0p25_1hr_{}z'.format(dateString,
-        #                                                                                                    hourString)
-        #         else:
-        #             url = 'http://nomads.ncep.noaa.gov:80/dods/gfs_0p25/gfs{}/gfs_0p25_{}z'.format(dateString, hourString)
-        #             numberHours = numberHours / 3
-        #
-        #     def downloadForecastfile(self):
+    def set_longitude(self, longitude):
+        pass
 
-# find latest forecast file
-# open forecast file
-#
+    def get_wind_profile(self, date, latitude, longitude):
+        pass
+
+
+def find_lat_index(latitude):
+    """
+    Finds the index of the nearest latitude point in a latitude list in a netcfd4 file with GFS forecast
+    :param latitude: float number representing latitude
+    :return:
+    """
+
+    latitude_round = round_coordinates(latitude)
+
+
+def find_lon_index(longitude):
+
+    longitude_round = round_coordinates(longitude)
+    pass
+
+
+
+

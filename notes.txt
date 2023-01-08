@@ -1,0 +1,120 @@
+import netCDF4
+from datetime import datetime, date
+from gfsFunctions import coordinateRound, readInput
+from scipy import interpolate
+from pydap.client import open_url
+
+# inputs
+dateForecast = datetime(2022, 4, 14, 12, 0, 0, 0)  # Date and hour for which the forecast is needed in local time
+latForecast = 53.425450
+lonForecast = 15.754236
+forecastInterval = 1  # forecast hour interval - 1 or 3 hour
+startAltitude = 100  # [m]
+
+latForecastRound = coordinateRound(latForecast)
+lonForecastRound = coordinateRound(lonForecast)
+
+data = readInput("mbar_altitude.csv")
+f = interpolate.interp1d(data[:, 0], data[:, 1])
+
+forecastRefreshHours = [0 + 5, 6 + 5, 12 + 5, 18 + 5]
+dateToday = datetime.today()  # read current date and time in local time
+if dateToday.hour < forecastRefreshHours[0]:
+    dateToday.day = dateToday.day - 1
+    hour = 18
+elif dateToday.hour < forecastRefreshHours[1]:
+    hour = 0
+elif dateToday.hour < forecastRefreshHours[2]:
+    hour = 6
+elif dateToday.hour < forecastRefreshHours[3]:
+    hour = 12
+else:
+    hour = 18
+
+# create string to aquire newest gfs forecast
+if len(str(dateToday.day)) == 1:
+    dayString = "0" + str(dateToday.day)
+else:
+    dayString = str(dateToday.day)
+
+if len(str(dateToday.month)) == 1:
+    monthString = "0" + str(dateToday.month)
+else:
+    monthString = str(dateToday.month)
+
+if len(str(hour)) == 1:
+    hourString = "0" + str(hour)
+else:
+    hourString = str(hour)
+
+dateFile = datetime(dateToday.year, dateToday.month, dateToday.day, hour, 0, 0, 0)
+numberHours = int((datetime.timestamp(dateForecast) - datetime.timestamp(dateFile)) / 3600)
+
+yearString = str(dateToday.year)
+dateString = yearString + monthString + dayString
+
+if forecastInterval == 1:
+    url = 'http://nomads.ncep.noaa.gov:80/dods/gfs_0p25_1hr/gfs{}/gfs_0p25_1hr_{}z'.format(dateString, hourString)
+else:
+    url = 'http://nomads.ncep.noaa.gov:80/dods/gfs_0p25/gfs{}/gfs_0p25_{}z'.format(dateString, hourString)
+    numberHours = numberHours / 3
+
+print("Getting wind profile forecast for date and time: ", dateForecast)
+print("Input latitude: {}, rounded to {}".format(latForecast, latForecastRound))
+print("Input longitude: {}, rounded to {}".format(lonForecast, lonForecastRound))
+print("Chosen hourly interval: {}".format(forecastInterval))
+print("Latest forecast file: ", dateString, hourString)
+print("Reading GFS file from URL ", url)
+
+dataset = netCDF4.Dataset(url)
+# dataset1 = open_url(url)
+uwind = dataset.variables["ugrdprs"]
+vwind = dataset.variables["vgrdprs"]
+altitudes = dataset.variables["lev"]
+lats = dataset.variables["lat"]
+lons = dataset.variables["lon"]
+time = dataset.variables["time"]
+
+# find position in datafile
+# number of hours between data start and required forecast
+
+timePos = numberHours + 1
+latPos = int((latForecastRound + 90) / 0.25) + 1
+lonPos = int((lonForecastRound / 0.25))
+
+print("Reading wind data from file:")
+print(uwind.long_name, '\n', vwind.long_name)
+print("Hour number in file:", timePos)
+print("Latitude position in file:", latPos)
+print("Longitude posistion in file:", lonPos)
+print("Latitude at position:", lats[latPos])
+print("Longitude at position:", lons[lonPos])
+
+altList = [10, 20, 30, 40, 50, 80, 100]
+
+outputPath = dateForecast.strftime('%Y_%m_%d_%H') + ".dat"
+file = open(outputPath, "w+")
+file.write('{},0.0,0.0 \n'.format(startAltitude))
+
+for altitudeNumber, altitude in enumerate(altList):
+    uString = "ugrd" + str(altitude) + "m"
+    vString = "vgrd" + str(altitude) + "m"
+    print(uString, vString, altitude)
+    uwindsSW = dataset.variables[uString]
+    vwindsSW = dataset.variables[vString]
+    uwindSW = uwindsSW[timePos, latPos, lonPos]
+    vwindSW = vwindsSW[timePos, latPos, lonPos]
+    print(uwindSW, vwindSW)
+    file.write("{},{},{} \n".format(altitude + startAltitude, uwindSW, vwindSW))
+
+for levelNumber, pressureLevel in enumerate(altitudes):
+    altitude = f(float(pressureLevel))
+    print("Pressure level: {}, Altitude: {}".format(pressureLevel, altitude))
+    # print("Uwind:",uwind[timePos, levelNumber, latPos, lonPos])
+    # print("Vwind:",vwind[timePos, levelNumber, latPos, lonPos])
+    if pressureLevel != 1000:
+        file.write("{},{},{} \n".format(altitude, uwind[timePos, levelNumber, latPos, lonPos],
+                                        vwind[timePos, levelNumber, latPos, lonPos]))
+
+file.close()
+

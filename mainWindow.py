@@ -78,7 +78,7 @@ class MainWindow(QMainWindow):
 
 
         self.forecast_number = QSpinBox()
-        self.forecast_date = QDateEdit(datetime.today())
+        self.forecast_date = QDateEdit(datetime.today()+timedelta(days=1))
         self.forecast_hour = QComboBox()
         for hour in self.hours: self.forecast_hour.addItem(str(hour))
         self.forecast_hour.setCurrentText("12")
