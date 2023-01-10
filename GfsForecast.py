@@ -27,6 +27,7 @@ class GfsForecast:
         self.temperatures = None
 
         self.download_latest_forecast()
+        self.process_gfs_forecast()
         self.set_latitude(latitude)
         self.set_longitude(longitude)
 
@@ -68,26 +69,27 @@ class GfsForecast:
         geopotential_heights = self.gfs_dataset.variables["hgtprs"]
         temperatures = self.gfs_dataset.variables["hgtprs"]
         pressures = self.gfs_dataset.variables["hgtprs"]
-        lats = self.gfs_dataset.variables["lat"][:].tolist()
-        lons = self.gfs_dataset.variables["lon"][:].tolist()
+        self.lats = self.gfs_dataset.variables["lat"][:].tolist()
+        self.lons = self.gfs_dataset.variables["lon"][:].tolist()
 
         forecast_day_index = date2index(self.forecast_datetime, time, calendar="gregorian")
         print("Time index: ", forecast_day_index)
-        print("Latitude index ", lats.index(50))
+        print("Latitude index ", self.lats.index(50))
         print(time[forecast_day_index])
         print(time[forecast_day_index]-time[0])
         print(time[1])
         print(time[3])
         print(uwind[0,0,0,0])
-        print(lats[0])
+        print(self.lats[0])
         print('pause')
 
     def set_latitude(self, latitude):
-        self.latitude = latitude
-        self.latitude_index = se
+        self.latitude = round_coordinates(latitude)
+        self.latitude_index = self.lats.index(self.latitude)
 
     def set_longitude(self, longitude):
-        pass
+        self.longitude = round_coordinates(longitude)
+        self.longitude_index = self.lons.index(self.longitude)
 
     def get_wind_profile(self, date, latitude, longitude):
         pass
@@ -101,6 +103,7 @@ def find_lat_index(latitude):
     """
 
     latitude_round = round_coordinates(latitude)
+
 
 
 def find_lon_index(longitude):
