@@ -16,25 +16,27 @@ from matplotlib.figure import Figure
 
 from GfsForecast import *
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("GFS GUI")
 
-        self.latitude = 0
-        self.longitude = 0
+        self.latitude = 54.561797
+        self.longitude = 16.648350
         self.latitude_round = 0
         self.longitude_round = 0
         self.date = None
         self.hour = None
         self.hours = list(range(24))
         self.environment = None
-        self.forecast = GfsForecast(latitude=0, longitude=0, forecast_datetime=None, forecast_interval=None)
+        self.forecast = None
 
-        self.UiComponents()
+        self.ui_components()
+        self.load_forecast()
+        self.update_coordinates_label()
 
-
-    def UiComponents(self):
+    def ui_components(self):
         layout = QVBoxLayout()
         coordinate_layout = QHBoxLayout()
         central_widget = QWidget()
@@ -61,8 +63,8 @@ class MainWindow(QMainWindow):
         self.longitude_layout.addWidget(self.east_checkbox)
         self.longitude_layout.addWidget(self.west_checkbox)
 
-        self.longitude_line.setText("0.00")
-        self.latitude_line.setText("0.00")
+        self.longitude_line.setText(str(self.longitude))
+        self.latitude_line.setText(str(self.latitude))
         self.north_checkbox.setChecked(1)
         self.east_checkbox.setChecked(1)
 
@@ -76,7 +78,6 @@ class MainWindow(QMainWindow):
         self.show_map_button.setCheckable(True)
         self.show_map_button.clicked.connect(self.show_map)
 
-
         self.forecast_number = QSpinBox()
         self.forecast_date = QDateEdit(datetime.today()+timedelta(days=1))
         self.forecast_hour = QComboBox()
@@ -84,10 +85,11 @@ class MainWindow(QMainWindow):
         self.forecast_hour.setCurrentText("12")
 
         self.show_forecast_button = QPushButton("Show")
-        self.download_forecast_button = QPushButton("Save")
+        self.download_forecast_button = QPushButton("Load")
+        self.download_forecast_button.clicked.connect(self.set_forecast_location)
         self.button_layout = QHBoxLayout(self)
 
-        self.show_forecast_button.clicked.connect(self.set_forecast)
+        self.show_forecast_button.clicked.connect(self.plot_forecast)
 
         self.button_layout.addWidget(self.show_forecast_button)
         self.button_layout.addWidget(self.download_forecast_button)
@@ -97,8 +99,8 @@ class MainWindow(QMainWindow):
         self.datetime_layout.addWidget(self.forecast_date)
         self.datetime_layout.addWidget(self.forecast_hour)
 
-        sc = MplCanvas(self, width=5, height=4, dpi=100)
-        sc.axes.plot([0, 1, 2, 3, 4], [10, 1, 20, 3, 40])
+        self.sc = MplCanvas(self, width=5, height=4, dpi=100)
+
 
         self.main_layout = QHBoxLayout(self)
 
@@ -115,13 +117,16 @@ class MainWindow(QMainWindow):
         self.main_left_layout.addLayout(self.button_layout)
         self.main_left_layout.addStretch()
 
-        self.main_right_layout.addWidget(sc)
+        self.main_right_layout.addWidget(self.sc)
 
         self.main_layout.addLayout(self.main_left_layout)
         self.main_layout.addLayout(self.main_right_layout)
 
         central_widget.setLayout(self.main_layout)
         self.setCentralWidget(central_widget)
+
+    def load_forecast(self):
+        self.forecast = GfsForecast(latitude=self.latitude_round, longitude=self.longitude_round, forecast_datetime=None, forecast_interval=None)
 
     def show_map(self):
         # From GeoPandas, our world map data
@@ -140,8 +145,8 @@ class MainWindow(QMainWindow):
         try:
             self.latitude = float(self.latitude)
             self.longitude = float(self.longitude)
-            self.latitude_round = round_coordinates(self.latitude)
-            self.longitude_round = round_coordinates(self.longitude)
+            self.latitude_round = round_to_quarter(self.latitude)
+            self.longitude_round = round_to_quarter(self.longitude)
 
         except ValueError:
             QMessageBox.about(self, 'Error', 'Input a number')
@@ -174,6 +179,22 @@ class MainWindow(QMainWindow):
 
     def save_forecast(self):
         pass
+
+    def set_forecast_location(self):
+        self.forecast.load_forecast_for_coordinates(self.latitude_round, self.longitude_round)
+
+    def plot_forecast(self):
+        date = self.forecast_date.date()
+        pydate = date.toPyDate()
+        hour = int(self.forecast_hour.currentText())
+        forecast_date = datetime(pydate.year, pydate.month, pydate.day, hour)
+        self.forecast.get_wind_profile(forecast_date, self.latitude_round, self.longitude_round)
+
+        self.sc.axes.cla()  # Clear the canvas.
+        self.sc.axes.plot(self.forecast.wind_speed_profile, self.forecast.heights_profile)
+        # Trigger the canvas to update and redraw.
+        self.sc.draw()
+        plt.show()
 
 
 class MplCanvas(FigureCanvasQTAgg):

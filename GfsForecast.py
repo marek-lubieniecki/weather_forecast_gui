@@ -1,7 +1,12 @@
+import math
+
 import netCDF4
+import numpy as np
 from netCDF4 import date2index
 from datetime import datetime, timezone, timedelta
 from utility import *
+import time
+import xarray
 
 class GfsForecast:
     def __init__(self, latitude, longitude, forecast_datetime, forecast_interval):
@@ -17,6 +22,7 @@ class GfsForecast:
 
         self.latitude_index = 0
         self.longitude_index = 0
+        self.date_index = 0
 
         self.times = None
         self.lats = None
@@ -25,11 +31,31 @@ class GfsForecast:
         self.uwinds = None
         self.pressures = None
         self.temperatures = None
+        self.surface_geopotential_height = None
+        self.geopotential_heights = None
+
+        self.heights_profile = None
+        self.vwinds_profile = None
+        self.uwinds_profile = None
+        self.temperature_profile = None
+        self.pressure_profile = None
+
+        self.wind_speed_profile = None
+        self.wind_heading_profile = None
+
+
+        self.uwinds_array = None
+        self.vwinds_array = None
+        self.times_array = None
+
+        self.number_of_forecast_points = 0
+        self.number_of_altitude_points = 0
 
         self.download_latest_forecast()
-        self.process_gfs_forecast()
+        self.load_forecast_variables()
         self.set_latitude(latitude)
         self.set_longitude(longitude)
+
 
     def download_latest_forecast(self):
         success = False
@@ -39,7 +65,7 @@ class GfsForecast:
 
         while not success and attempt_count < 10:
             attempt_count += 1
-            self.forecast_file_date -= timedelta(hours=6 * attempt_count)
+            self.forecast_file_date -= timedelta(hours=6)
             hour_round = 6 * (self.forecast_file_date.hour // 6)
             self.forecast_file_date = self.forecast_file_date.replace(hour=hour_round, minute=0, second=0,
                                                                       microsecond=0)
@@ -54,63 +80,86 @@ class GfsForecast:
                 print("Retrieving file: ", str(self.forecast_file_date))
                 print("GFS Url: ", self.gfs_url)
                 self.gfs_dataset = netCDF4.Dataset(self.gfs_url)
+
             except OSError:
-                print("Dataset ", self.gfs_url, "not found!")
+                print("\nDataset ", self.gfs_url, "not found!")
 
             else:
-                print("Dataset found!")
+                print("\nDataset found!")
                 success = True
 
-    def process_gfs_forecast(self):
-        time = self.gfs_dataset.variables["time"]
-        uwind = self.gfs_dataset.variables["ugrdprs"]
-        vwind = self.gfs_dataset.variables["vgrdprs"]
-        surface_geopotential_height = self.gfs_dataset.variables["hgtsfc"]
-        geopotential_heights = self.gfs_dataset.variables["hgtprs"]
-        temperatures = self.gfs_dataset.variables["hgtprs"]
-        pressures = self.gfs_dataset.variables["hgtprs"]
+    def load_forecast_variables(self):
+        self.times = self.gfs_dataset.variables["time"]
         self.lats = self.gfs_dataset.variables["lat"][:].tolist()
         self.lons = self.gfs_dataset.variables["lon"][:].tolist()
+        self.uwinds = self.gfs_dataset.variables["ugrdprs"]
+        self.vwinds = self.gfs_dataset.variables["vgrdprs"]
+        self.temperatures = self.gfs_dataset.variables["hgtprs"]
+        self.pressures = self.gfs_dataset.variables["hgtprs"]
+        self.surface_geopotential_height = self.gfs_dataset.variables["hgtsfc"]
+        self.geopotential_heights = self.gfs_dataset.variables["hgtprs"]
 
-        forecast_day_index = date2index(self.forecast_datetime, time, calendar="gregorian")
-        print("Time index: ", forecast_day_index)
-        print("Latitude index ", self.lats.index(50))
-        print(time[forecast_day_index])
-        print(time[forecast_day_index]-time[0])
-        print(time[1])
-        print(time[3])
-        print(uwind[0,0,0,0])
-        print(self.lats[0])
-        print('pause')
+        self.number_of_forecast_points = self.times.size
+        self.number_of_altitude_points = self.geopotential_heights.shape[1]
+
+    def set_datetime(self, forecast_datetime):
+        self.forecast_datetime = forecast_datetime
+        self.date_index = date2index(self.forecast_datetime, self.times, calendar="gregorian")
 
     def set_latitude(self, latitude):
-        self.latitude = round_coordinates(latitude)
+        self.latitude = round_to_quarter(latitude)
         self.latitude_index = self.lats.index(self.latitude)
 
     def set_longitude(self, longitude):
-        self.longitude = round_coordinates(longitude)
+        self.longitude = round_to_quarter(longitude)
         self.longitude_index = self.lons.index(self.longitude)
 
-    def get_wind_profile(self, date, latitude, longitude):
-        pass
+    def load_forecast_for_coordinates(self, latitude, longitude):
 
 
-def find_lat_index(latitude):
-    """
-    Finds the index of the nearest latitude point in a latitude list in a netcfd4 file with GFS forecast
-    :param latitude: float number representing latitude
-    :return:
-    """
+        time_slice = (0, 10)
 
-    latitude_round = round_coordinates(latitude)
+        test_dataset = xarray.open_dataset(self.gfs_url)
+        var = ['ugrdprs']
+        st = time.time()
+        test_dataset[var].isel(time=slice(*time_slice)).sel(lat=self.latitude, lon=self.longitude).to_netcdf('test_uwind.nc')
+        et = time.time()
+        elapsed_time = et - st
+        print('Var saved in', elapsed_time)
+        #test_dataset_2 = xarray.open_dataset('test_uwind.nc')
+        #print("Var opened")
+        self.set_latitude(latitude)
+        self.set_longitude(longitude)
 
+        self.uwinds_array = np.zeros((self.number_of_forecast_points, self.number_of_altitude_points))
+        self.vwinds_array = np.zeros((self.number_of_forecast_points, self.number_of_altitude_points))
 
+        for i in range(5):
+                st = time.time()
+                self.uwinds_array[i][:] = self.uwinds[i, :, self.latitude_index, self.longitude_index]
+                self.vwinds_array[i][:] = self.uwinds[i, :, self.latitude_index, self.longitude_index]
+                et = time.time()
+                elapsed_time = et - st
+                print(i, ' ', elapsed_time)
 
-def find_lon_index(longitude):
+        print("Loading complete")
 
-    longitude_round = round_coordinates(longitude)
-    pass
+    def get_wind_profile(self, forecast_datetime, latitude, longitude):
 
+        self.set_latitude(latitude)
+        self.set_longitude(longitude)
+        self.set_datetime(forecast_datetime)
+
+        self.uwinds_profile = self.uwinds[self.date_index, :, self.latitude_index, self.longitude_index]
+        self.vwinds_profile = self.vwinds[self.date_index, :, self.latitude_index, self.longitude_index]
+        self.heights_profile = self.geopotential_heights[self.date_index, :, self.latitude_index, self.longitude_index]
+        self.temperature_profile = self.temperatures[self.date_index, :, self.latitude_index, self.longitude_index]
+
+        self.wind_speed_profile = []
+
+        for i in range(self.number_of_altitude_points):
+            wind_speed = math.sqrt(self.uwinds_profile[i]*self.uwinds_profile[i] + self.vwinds_profile[i]*self.vwinds_profile[i])
+            self.wind_speed_profile.append(wind_speed)
 
 
 
