@@ -1,5 +1,7 @@
 import sys
 
+import numpy
+import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDateEdit, QVBoxLayout, QHBoxLayout, QGridLayout,QButtonGroup, \
     QLineEdit, QLabel, QWidget, QPushButton, QMessageBox, QComboBox, QSpinBox
 from PyQt5.QtCore import Qt
@@ -11,7 +13,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from rocketpy import Environment
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
 from GfsForecast import *
@@ -85,8 +88,8 @@ class MainWindow(QMainWindow):
         self.forecast_hour.setCurrentText("12")
 
         self.show_forecast_button = QPushButton("Show")
-        self.download_forecast_button = QPushButton("Load")
-        self.download_forecast_button.clicked.connect(self.set_forecast_location)
+        self.download_forecast_button = QPushButton("Save")
+        self.download_forecast_button.clicked.connect(self.save_forecast)
         self.button_layout = QHBoxLayout(self)
 
         self.show_forecast_button.clicked.connect(self.plot_forecast)
@@ -100,7 +103,7 @@ class MainWindow(QMainWindow):
         self.datetime_layout.addWidget(self.forecast_hour)
 
         self.sc = MplCanvas(self, width=5, height=4, dpi=100)
-
+        toolbar = NavigationToolbar(self.sc, self)
 
         self.main_layout = QHBoxLayout(self)
 
@@ -117,7 +120,11 @@ class MainWindow(QMainWindow):
         self.main_left_layout.addLayout(self.button_layout)
         self.main_left_layout.addStretch()
 
-        self.main_right_layout.addWidget(self.sc)
+        self.canvas_layout = QVBoxLayout()
+        self.canvas_layout.addWidget(toolbar)
+        self.canvas_layout.addWidget(self.sc)
+
+        self.main_right_layout.addLayout(self.canvas_layout)
 
         self.main_layout.addLayout(self.main_left_layout)
         self.main_layout.addLayout(self.main_right_layout)
@@ -190,16 +197,22 @@ class MainWindow(QMainWindow):
         forecast_date = datetime(pydate.year, pydate.month, pydate.day, hour)
         self.forecast.get_wind_profile(forecast_date, self.latitude_round, self.longitude_round)
 
-        self.sc.axes.cla()  # Clear the canvas.
-        self.sc.axes.plot(self.forecast.wind_speed_profile, self.forecast.heights_profile)
+        self.sc.ax1.cla()  # Clear the canvas.
+        self.sc.ax1.plot(self.forecast.wind_speed_profile, self.forecast.heights_profile, color = 'blue')
+        self.sc.ax2.plot(self.forecast.wind_heading_profile, self.forecast.heights_profile,  color = 'red')
         # Trigger the canvas to update and redraw.
         self.sc.draw()
         plt.show()
 
+    def save_forecast(self):
+        numpy.savetxt("atmosphere_forecast.csv",self.forecast.forecast_array,delimiter=',')
 
-class MplCanvas(FigureCanvasQTAgg):
 
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
+
+class MplCanvas(FigureCanvas):
+
+    def __init__(self, parent=None, width=5, height=12, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
+        self.ax1 = fig.subplots(nrows=1)
+        self.ax2 = self.ax1.twiny()
         super(MplCanvas, self).__init__(fig)

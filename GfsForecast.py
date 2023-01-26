@@ -47,6 +47,7 @@ class GfsForecast:
         self.uwinds_array = None
         self.vwinds_array = None
         self.times_array = None
+        self.forecast_array = None
 
         self.number_of_forecast_points = 0
         self.number_of_altitude_points = 0
@@ -94,13 +95,14 @@ class GfsForecast:
         self.lons = self.gfs_dataset.variables["lon"][:].tolist()
         self.uwinds = self.gfs_dataset.variables["ugrdprs"]
         self.vwinds = self.gfs_dataset.variables["vgrdprs"]
-        self.temperatures = self.gfs_dataset.variables["hgtprs"]
-        self.pressures = self.gfs_dataset.variables["hgtprs"]
+        self.temperatures = self.gfs_dataset.variables["tmpprs"]
+        self.pressures = self.gfs_dataset.variables["lev"][:].tolist()
         self.surface_geopotential_height = self.gfs_dataset.variables["hgtsfc"]
         self.geopotential_heights = self.gfs_dataset.variables["hgtprs"]
 
         self.number_of_forecast_points = self.times.size
         self.number_of_altitude_points = self.geopotential_heights.shape[1]
+        self.forecast_array = np.zeros((self.number_of_altitude_points, 5))
 
     def set_datetime(self, forecast_datetime):
         self.forecast_datetime = forecast_datetime
@@ -155,11 +157,30 @@ class GfsForecast:
         self.heights_profile = self.geopotential_heights[self.date_index, :, self.latitude_index, self.longitude_index]
         self.temperature_profile = self.temperatures[self.date_index, :, self.latitude_index, self.longitude_index]
 
+
         self.wind_speed_profile = []
+        self.wind_heading_profile = []
 
         for i in range(self.number_of_altitude_points):
-            wind_speed = math.sqrt(self.uwinds_profile[i]*self.uwinds_profile[i] + self.vwinds_profile[i]*self.vwinds_profile[i])
+            altitude = self.heights_profile[i]
+            u = self.uwinds_profile[i]
+            v = self.vwinds_profile[i]
+            temperature = self.temperature_profile[i]
+            pressure = self.pressures[i]
+
+            self.forecast_array[i][0] = altitude
+            self.forecast_array[i][1] = u
+            self.forecast_array[i][2] = v
+            self.forecast_array[i][3] = temperature
+            self.forecast_array[i][4] = pressure
+
+            wind_speed = math.sqrt(u*u + v*v)
+            wind_heading = (math.degrees(math.atan2(v, u)))
+            if wind_heading < 0:
+                wind_heading = wind_heading + 360
+
             self.wind_speed_profile.append(wind_speed)
+            self.wind_heading_profile.append(wind_heading)
 
 
 
