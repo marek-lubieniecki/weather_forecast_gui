@@ -208,7 +208,6 @@ class MainWindow(QMainWindow):
         numpy.savetxt("atmosphere_forecast.csv",self.forecast.forecast_array,delimiter=',')
 
 
-
 class MplCanvas(FigureCanvas):
 
     def __init__(self, parent=None, width=5, height=12, dpi=100):

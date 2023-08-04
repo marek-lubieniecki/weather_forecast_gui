@@ -54,9 +54,8 @@ class GfsForecast:
 
         self.download_latest_forecast()
         self.load_forecast_variables()
-        self.set_latitude(latitude)
-        self.set_longitude(longitude)
-
+        #self.set_latitude(latitude)
+        #self.set_longitude(longitude)
 
     def download_latest_forecast(self):
         success = False
@@ -71,7 +70,8 @@ class GfsForecast:
             self.forecast_file_date = self.forecast_file_date.replace(hour=hour_round, minute=0, second=0,
                                                                       microsecond=0)
 
-            self.gfs_url = "https://nomads.ncep.noaa.gov/dods/gfs_0p25/gfs{:04d}{:02d}{:02d}/gfs_0p25_{:02d}z".format(
+            self.gfs_url = "http://nomads.ncep.noaa.gov:80/dods/gfs_0p25/gfs{:04d}{:02d}{:02d}/gfs_0p25" \
+                           "_{:02d}z".format(
                 self.forecast_file_date.year,
                 self.forecast_file_date.month,
                 self.forecast_file_date.day,
@@ -80,6 +80,8 @@ class GfsForecast:
             try:
                 print("Retrieving file: ", str(self.forecast_file_date))
                 print("GFS Url: ", self.gfs_url)
+                self.gfs_dataset_xarray = xarray.open_dataset(self.gfs_url)
+                print("Xarray opened!")
                 self.gfs_dataset = netCDF4.Dataset(self.gfs_url)
 
             except OSError:
@@ -107,14 +109,19 @@ class GfsForecast:
     def set_datetime(self, forecast_datetime):
         self.forecast_datetime = forecast_datetime
         self.date_index = date2index(self.forecast_datetime, self.times, calendar="gregorian")
+        print("Date index set to :", self.date_index)
 
     def set_latitude(self, latitude):
         self.latitude = round_to_quarter(latitude)
         self.latitude_index = self.lats.index(self.latitude)
+        print("Latitude index set to :", self.latitude_index )
 
     def set_longitude(self, longitude):
+        if longitude < 0:
+            longitude = 360 + longitude
         self.longitude = round_to_quarter(longitude)
         self.longitude_index = self.lons.index(self.longitude)
+        print("Longitude index set to :", self.longitude_index)
 
     def load_forecast_for_coordinates(self, latitude, longitude):
 
@@ -182,5 +189,21 @@ class GfsForecast:
             self.wind_speed_profile.append(wind_speed)
             self.wind_heading_profile.append(wind_heading)
 
+
+    def download_day_forecast(self, date):
+        pass
+        # open dataset
+
+        # choose data for given date
+
+        # save data to file
+
+    def load_day_forecast(self, date):
+        pass
+        #check if file exists
+
+        #try to open file
+
+        #if not, download file
 
 
