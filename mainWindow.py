@@ -234,6 +234,5 @@ class MplCanvas(FigureCanvas):
         self.ax2.spines["bottom"].set_color("blue")
         self.ax2.spines["top"].set_color("red")
 
-
         self.fig.set_figheight(6)
         self.fig.set_figwidth(6)
