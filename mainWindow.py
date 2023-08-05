@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
         self.longitude_round = 0
         self.date = None
         self.hour = None
-        self.hours = list(range(24))
+        self.hours = [3 * x for x in range(0,7)]
         self.environment = None
         self.forecast = None
 
@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
 
         self.forecast_data_label = QLabel()
 
-        self.sc = MplCanvas(self, width=5, height=4, dpi=100)
+        self.sc = MplCanvas(self, width=8, height=7, dpi=100)
         toolbar = NavigationToolbar(self.sc, self)
 
         self.main_layout = QHBoxLayout(self)
@@ -196,25 +196,44 @@ class MainWindow(QMainWindow):
         hour = int(self.forecast_hour.currentText())
         forecast_date = datetime(pydate.year, pydate.month, pydate.day, hour)
         self.forecast.get_wind_profile(forecast_date, self.latitude_round, self.longitude_round)
-
-        self.sc.ax1.cla()  # Clear the canvas.
-        self.sc.ax2.cla()  # Clear the canvas.
-        self.sc.ax1.plot(self.forecast.wind_speed_profile, self.forecast.heights_profile, color = 'blue')
-        self.sc.ax2.plot(self.forecast.wind_heading_profile, self.forecast.heights_profile,  color = 'red')
-        # Trigger the canvas to update and redraw.
-        self.sc.draw()
+        self.forecast_number.setValue(self.forecast.date_index)
+        self.sc.ax1.clear()  # Clear the canvas.
+        self.sc.ax2.clear()  # Clear the canvas.
+        self.sc.ax1.plot(self.forecast.wind_speed_profile, self.forecast.heights_profile, color='blue')
+        self.sc.ax2.plot(self.forecast.wind_heading_profile, self.forecast.heights_profile,  color='red')
+        self.sc.format_plot()
+        self.sc.draw()  # Trigger the canvas to update and redraw.
         plt.show()
 
     def save_forecast(self):
-        fileName = QFileDialog.getSaveFileName(self, "Save File", 'forecast.txt', '.txt')
-        if fileName:
-            numpy.savetxt(fileName[0], self.forecast.forecast_array, delimiter=',')
+        file_name = QFileDialog.getSaveFileName(self, "Save File", 'forecast.txt', '.txt')
+        if file_name:
+            numpy.savetxt(file_name[0], self.forecast.forecast_array, delimiter=',')
 
 
 class MplCanvas(FigureCanvas):
 
-    def __init__(self, parent=None, width=5, height=12, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.ax1 = fig.subplots(nrows=1)
+    def __init__(self, parent=None, width=10, height=10, dpi=100):
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.fig.tight_layout()
+        self.ax1 = self.fig.subplots(nrows=1)
         self.ax2 = self.ax1.twiny()
-        super(MplCanvas, self).__init__(fig)
+
+        self.format_plot()
+        super(MplCanvas, self).__init__(self.fig)
+
+    def format_plot(self):
+        self.ax1.set_xlabel("Wind speed [m/s]", color="blue")
+        self.ax2.set_xlabel("Wind heading [deg]", color="red")
+
+        self.ax1.set_ylabel("Altitude [m]")
+        self.ax1.grid()
+        self.ax1.set_xlim([0, 60])
+        self.ax2.set_xlim([0, 360])
+        self.ax2.set_xticks(np.linspace(0, 360, 7))
+        self.ax2.spines["bottom"].set_color("blue")
+        self.ax2.spines["top"].set_color("red")
+
+
+        self.fig.set_figheight(6)
+        self.fig.set_figwidth(6)
