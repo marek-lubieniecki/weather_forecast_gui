@@ -7,6 +7,8 @@ from datetime import datetime, timezone, timedelta
 from utility import *
 import time
 import xarray
+import threading
+
 
 class GfsForecast:
     def __init__(self, latitude, longitude, forecast_datetime, forecast_interval):
@@ -43,7 +45,6 @@ class GfsForecast:
         self.wind_speed_profile = None
         self.wind_heading_profile = None
 
-
         self.uwinds_array = None
         self.vwinds_array = None
         self.times_array = None
@@ -54,8 +55,6 @@ class GfsForecast:
 
         self.download_latest_forecast()
         self.load_forecast_variables()
-        #self.set_latitude(latitude)
-        #self.set_longitude(longitude)
 
     def download_latest_forecast(self):
         success = False
@@ -80,8 +79,6 @@ class GfsForecast:
             try:
                 print("Retrieving file: ", str(self.forecast_file_date))
                 print("GFS Url: ", self.gfs_url)
-                self.gfs_dataset_xarray = xarray.open_dataset(self.gfs_url)
-                print("Xarray opened!")
                 self.gfs_dataset = netCDF4.Dataset(self.gfs_url)
 
             except OSError:
@@ -125,7 +122,6 @@ class GfsForecast:
 
     def load_forecast_for_coordinates(self, latitude, longitude):
 
-
         time_slice = (0, 10)
 
         test_dataset = xarray.open_dataset(self.gfs_url)
@@ -164,7 +160,6 @@ class GfsForecast:
         self.heights_profile = self.geopotential_heights[self.date_index, :, self.latitude_index, self.longitude_index]
         self.temperature_profile = self.temperatures[self.date_index, :, self.latitude_index, self.longitude_index]
 
-
         self.wind_speed_profile = []
         self.wind_heading_profile = []
 
@@ -188,7 +183,6 @@ class GfsForecast:
 
             self.wind_speed_profile.append(wind_speed)
             self.wind_heading_profile.append(wind_heading)
-
 
     def download_day_forecast(self, date):
         pass

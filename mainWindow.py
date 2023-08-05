@@ -184,9 +184,6 @@ class MainWindow(QMainWindow):
         self.environment.setAtmosphericModel(type='Forecast', file='GFS')
         self.environment.allInfo()
 
-    def save_forecast(self):
-        pass
-
     def set_forecast_location(self):
         self.forecast.load_forecast_for_coordinates(self.latitude_round, self.longitude_round)
 
@@ -198,6 +195,7 @@ class MainWindow(QMainWindow):
         self.forecast.get_wind_profile(forecast_date, self.latitude_round, self.longitude_round)
 
         self.sc.ax1.cla()  # Clear the canvas.
+        self.sc.ax2.cla()  # Clear the canvas.
         self.sc.ax1.plot(self.forecast.wind_speed_profile, self.forecast.heights_profile, color = 'blue')
         self.sc.ax2.plot(self.forecast.wind_heading_profile, self.forecast.heights_profile,  color = 'red')
         # Trigger the canvas to update and redraw.
