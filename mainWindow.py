@@ -3,7 +3,7 @@ import sys
 import numpy
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDateEdit, QVBoxLayout, QHBoxLayout, QGridLayout,QButtonGroup, \
-    QLineEdit, QLabel, QWidget, QPushButton, QMessageBox, QComboBox, QSpinBox
+    QLineEdit, QLabel, QWidget, QPushButton, QMessageBox, QComboBox, QSpinBox, QFileDialog
 from PyQt5.QtCore import Qt
 
 from widgetConfig import *
@@ -88,19 +88,23 @@ class MainWindow(QMainWindow):
         self.forecast_hour.setCurrentText("12")
 
         self.show_forecast_button = QPushButton("Show")
-        self.download_forecast_button = QPushButton("Save")
+        self.download_forecast_button = QPushButton("Save as")
         self.download_forecast_button.clicked.connect(self.save_forecast)
         self.button_layout = QHBoxLayout(self)
 
         self.show_forecast_button.clicked.connect(self.plot_forecast)
 
-        self.button_layout.addWidget(self.show_forecast_button)
-        self.button_layout.addWidget(self.download_forecast_button)
+
 
         self.datetime_layout = QHBoxLayout(self)
         self.datetime_layout.addWidget(self.forecast_number)
         self.datetime_layout.addWidget(self.forecast_date)
         self.datetime_layout.addWidget(self.forecast_hour)
+
+        self.button_layout.addWidget(self.show_forecast_button)
+        self.button_layout.addWidget(self.download_forecast_button)
+
+        self.forecast_data_label = QLabel()
 
         self.sc = MplCanvas(self, width=5, height=4, dpi=100)
         toolbar = NavigationToolbar(self.sc, self)
@@ -118,6 +122,7 @@ class MainWindow(QMainWindow):
         self.main_left_layout.addWidget(self.show_map_button)
         self.main_left_layout.addLayout(self.datetime_layout)
         self.main_left_layout.addLayout(self.button_layout)
+        self.main_left_layout.addWidget(self.forecast_data_label)
         self.main_left_layout.addStretch()
 
         self.canvas_layout = QVBoxLayout()
@@ -134,6 +139,7 @@ class MainWindow(QMainWindow):
 
     def load_forecast(self):
         self.forecast = GfsForecast(latitude=self.latitude_round, longitude=self.longitude_round, forecast_datetime=None, forecast_interval=None)
+        self.forecast_data_label.setText("Current forecast loaded" + "\n" + str(self.forecast.gfs_url))
 
     def show_map(self):
         # From GeoPandas, our world map data
@@ -203,7 +209,10 @@ class MainWindow(QMainWindow):
         plt.show()
 
     def save_forecast(self):
-        numpy.savetxt("atmosphere_forecast.csv",self.forecast.forecast_array,delimiter=',')
+        fileName = QFileDialog.getSaveFileName(self, "Save File", 'forecast.txt', '.txt')
+        if fileName:
+            print(fileName)
+            numpy.savetxt(fileName[0], self.forecast.forecast_array, delimiter=',')
 
 
 class MplCanvas(FigureCanvas):
