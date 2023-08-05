@@ -93,9 +93,6 @@ class MainWindow(QMainWindow):
         self.button_layout = QHBoxLayout(self)
 
         self.show_forecast_button.clicked.connect(self.plot_forecast)
-
-
-
         self.datetime_layout = QHBoxLayout(self)
         self.datetime_layout.addWidget(self.forecast_number)
         self.datetime_layout.addWidget(self.forecast_date)
@@ -211,7 +208,6 @@ class MainWindow(QMainWindow):
     def save_forecast(self):
         fileName = QFileDialog.getSaveFileName(self, "Save File", 'forecast.txt', '.txt')
         if fileName:
-            print(fileName)
             numpy.savetxt(fileName[0], self.forecast.forecast_array, delimiter=',')
 
 
