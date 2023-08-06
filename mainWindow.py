@@ -199,8 +199,9 @@ class MainWindow(QMainWindow):
         self.progress_indicator.setWindowModality(Qt.WindowModal)
         self.progress_indicator.setRange(0, 0)
         self.progress_indicator.setAttribute(Qt.WA_DeleteOnClose)
-        self.progress_indicator.setWindowTitle("Weather GFS")
+        self.progress_indicator.setWindowTitle("GFS GUI")
         self.progress_indicator.setLabelText("Downloading forecast")
+        self.progress_indicator.setCancelButton(None)
         self.message_obj.finished.connect(self.progress_indicator.close, Qt.QueuedConnection)
         self.progress_indicator.show()
 
