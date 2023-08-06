@@ -1,10 +1,9 @@
 import sys
 
-import numpy
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDateEdit, QVBoxLayout, QHBoxLayout, QGridLayout,QButtonGroup, \
-    QLineEdit, QLabel, QWidget, QPushButton, QMessageBox, QComboBox, QSpinBox, QFileDialog
-from PyQt5.QtCore import Qt
+    QLineEdit, QLabel, QWidget, QPushButton, QMessageBox, QComboBox, QSpinBox, QFileDialog, QProgressDialog
+from PyQt5.QtCore import QObject, pyqtSignal, Qt
 
 from widgetConfig import *
 from utility import *
@@ -19,6 +18,7 @@ from matplotlib.figure import Figure
 
 from GfsForecast import *
 
+from threading import Thread
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -31,13 +31,17 @@ class MainWindow(QMainWindow):
         self.longitude_round = 0
         self.date = None
         self.hour = None
-        self.hours = [3 * x for x in range(0,7)]
+        self.hours = [3 * x for x in range(0, 7)]
         self.environment = None
         self.forecast = None
 
+        self.signals()
         self.ui_components()
         self.load_forecast()
         self.update_coordinates_label()
+
+    def signals(self):
+        self.message_obj = Message()
 
     def ui_components(self):
         layout = QVBoxLayout()
@@ -92,7 +96,7 @@ class MainWindow(QMainWindow):
         self.download_forecast_button.clicked.connect(self.save_forecast)
         self.button_layout = QHBoxLayout(self)
 
-        self.show_forecast_button.clicked.connect(self.plot_forecast)
+        self.show_forecast_button.clicked.connect(self.show_btn_clicked)
         self.datetime_layout = QHBoxLayout(self)
         self.datetime_layout.addWidget(self.forecast_number)
         self.datetime_layout.addWidget(self.forecast_date)
@@ -190,25 +194,38 @@ class MainWindow(QMainWindow):
     def set_forecast_location(self):
         self.forecast.load_forecast_for_coordinates(self.latitude_round, self.longitude_round)
 
-    def plot_forecast(self):
+    def show_btn_clicked(self):
+        self.progress_indicator = QProgressDialog(self)
+        self.progress_indicator.setWindowModality(Qt.WindowModal)
+        self.progress_indicator.setRange(0, 0)
+        self.progress_indicator.setAttribute(Qt.WA_DeleteOnClose)
+        self.progress_indicator.
+        self.message_obj.finished.connect(self.progress_indicator.close, Qt.QueuedConnection)
+        self.progress_indicator.show()
+        x = Thread(target=self.plot_wind_profile, args = [self.message_obj])
+        x.start()
+
+    def plot_wind_profile(self, obj):
+
         date = self.forecast_date.date()
         pydate = date.toPyDate()
         hour = int(self.forecast_hour.currentText())
         forecast_date = datetime(pydate.year, pydate.month, pydate.day, hour)
         self.forecast.get_wind_profile(forecast_date, self.latitude_round, self.longitude_round)
         self.forecast_number.setValue(self.forecast.date_index)
-        self.sc.ax1.clear()  # Clear the canvas.
-        self.sc.ax2.clear()  # Clear the canvas.
-        self.sc.ax1.plot(self.forecast.wind_speed_profile, self.forecast.heights_profile, color='blue')
-        self.sc.ax2.plot(self.forecast.wind_heading_profile, self.forecast.heights_profile,  color='red')
-        self.sc.format_plot()
-        self.sc.draw()  # Trigger the canvas to update and redraw.
-        plt.show()
+        self.sc.plot_ax1(self.forecast.wind_speed_profile, self.forecast.heights_profile)
+        self.sc.plot_ax2(self.forecast.wind_heading_profile, self.forecast.heights_profile)
+        self.sc.update_plot()
+        obj.finished.emit()
 
     def save_forecast(self):
         file_name = QFileDialog.getSaveFileName(self, "Save File", 'forecast.txt', '.txt')
         if file_name:
             numpy.savetxt(file_name[0], self.forecast.forecast_array, delimiter=',')
+
+
+class Message(QObject):
+    finished = pyqtSignal()
 
 
 class MplCanvas(FigureCanvas):
@@ -221,6 +238,7 @@ class MplCanvas(FigureCanvas):
 
         self.format_plot()
         super(MplCanvas, self).__init__(self.fig)
+
 
     def format_plot(self):
         self.ax1.set_xlabel("Wind speed [m/s]", color="blue")
@@ -236,3 +254,15 @@ class MplCanvas(FigureCanvas):
 
         self.fig.set_figheight(6)
         self.fig.set_figwidth(6)
+
+    def update_plot(self):
+        self.format_plot()
+        self.draw()
+
+    def plot_ax1(self, x, y):
+        self.ax1.clear()  # Clear the canvas.
+        self.ax1.plot(x, y, color='blue')
+
+    def plot_ax2(self, x, y):
+        self.ax2.clear()  # Clear the canvas.
+        self.ax2.plot(x, y, color='red')
